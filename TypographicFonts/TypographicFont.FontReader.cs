@@ -70,9 +70,8 @@ namespace jnm2.TypographicFonts
                 var entrySelector = br.ReadUInt16();
                 var rangeShift = br.ReadUInt16();
 
-                var familyNames = default(FamilyNamesInfo);
-                var fontStyle = default(FontStyle);
-                var weightClass = default(TypographicFontWeight);
+                var familyNames = default(FamilyNamesInfo?);
+                var os2Info = default(OS2Info?);
                 for (var ti = 0; ti < numTables; ti++)
                 {
                     var tag = Encoding.ASCII.GetString(br.ReadBytes(4));
@@ -86,30 +85,29 @@ namespace jnm2.TypographicFonts
                         case "name":
                             familyNames = ReadFamilyNames(br, offset);
                             break;
-                        case "head":
-                            fontStyle = ReadHead(br, offset);
-                            break;
                         case "OS/2":
-                            weightClass = ReadOS2(br, offset);
+                            os2Info = ReadOS2(br, offset);
                             break;
                     }
+                    if (familyNames != null && os2Info != null) break;
                     br.BaseStream.Seek(position, SeekOrigin.Begin);
                 }
 
-                if (familyNames.FontName == null) return null;
+                if (familyNames == null || os2Info == null) return null;
 
                 return new TypographicFont(
-                    familyNames.TypographicFamily,
-                    familyNames.TypographicSubfamily == string.Empty ? null : familyNames.TypographicSubfamily,
-                    familyNames.FontName,
-                    weightClass,
-                    (fontStyle & FontStyle.Bold) != 0,
-                    (fontStyle & FontStyle.Italic) != 0,
-                    (fontStyle & FontStyle.Underline) != 0,
-                    (fontStyle & FontStyle.Outline) != 0,
-                    (fontStyle & FontStyle.Shadow) != 0,
-                    (fontStyle & FontStyle.Condensed) != 0,
-                    (fontStyle & FontStyle.Extended) != 0,
+                    familyNames.Value.TypographicFamily,
+                    familyNames.Value.TypographicSubfamily == string.Empty ? null : familyNames.Value.TypographicSubfamily,
+                    familyNames.Value.FontName,
+                    os2Info.Value.Weight,
+                    (os2Info.Value.Style & FontStyle.Bold) != 0,
+                    (os2Info.Value.Style & FontStyle.Italic) != 0,
+                    (os2Info.Value.Style & FontStyle.Oblique) != 0,
+                    (os2Info.Value.Style & FontStyle.Underscore) != 0,
+                    (os2Info.Value.Style & FontStyle.Negative) != 0,
+                    (os2Info.Value.Style & FontStyle.Outlined) != 0,
+                    (os2Info.Value.Style & FontStyle.Strikeout) != 0,
+                    (os2Info.Value.Style & FontStyle.Regular) != 0,
                     filename
                 );
             }
@@ -204,19 +202,25 @@ namespace jnm2.TypographicFonts
             }
 
 
-            // http://www.microsoft.com/typography/otspec/head.htm
-            private static FontStyle ReadHead(BigEndianBinaryReader br, uint offset)
+            private struct OS2Info
             {
-                br.BaseStream.Seek(offset + 44, SeekOrigin.Begin);
-                return (FontStyle)br.ReadUInt16();
+                public readonly TypographicFontWeight Weight;
+                public readonly FontStyle Style;
+
+                public OS2Info(TypographicFontWeight weight, FontStyle style)
+                {
+                    Weight = weight;
+                    Style = style;
+                }
             }
-
-
             // http://www.microsoft.com/typography/otspec/os2.htm
-            private static TypographicFontWeight ReadOS2(BigEndianBinaryReader br, uint offset)
+            private static OS2Info ReadOS2(BigEndianBinaryReader br, uint offset)
             {
                 br.BaseStream.Seek(offset + 4, SeekOrigin.Begin);
-                return (TypographicFontWeight)br.ReadUInt16();
+                var weight = (TypographicFontWeight)br.ReadUInt16();
+                br.BaseStream.Seek(56, SeekOrigin.Current);
+                var style = (FontStyle)br.ReadUInt16();
+                return new OS2Info(weight, style);
             }
 
 
@@ -232,13 +236,16 @@ namespace jnm2.TypographicFonts
             [Flags]
             private enum FontStyle : ushort
             {
-                Bold = 1 << 0,
-                Italic = 1 << 1,
-                Underline = 1 << 2,
-                Outline = 1 << 3,
-                Shadow = 1 << 4,
-                Condensed = 1 << 5,
-                Extended = 1 << 6
+                Italic = 1 << 0,
+                Underscore = 1 << 1,
+                Negative = 1 << 2,
+                Outlined = 1 << 3,
+                Strikeout = 1 << 4,
+                Bold = 1 << 5,
+                Regular = 1 << 6,
+                UseTypoMetrics = 1 << 7,
+                WWS = 1 << 8,
+                Oblique = 1 << 9
             }
 
             private enum NameId : ushort

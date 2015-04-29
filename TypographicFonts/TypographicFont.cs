@@ -40,31 +40,35 @@ namespace jnm2.TypographicFonts
         /// </summary>
         public bool Italic { get; private set; }
         /// <summary>
+        /// If true, this font is natively oblique.
+        /// </summary>
+        public bool Oblique { get; private set; }
+        /// <summary>
         /// If true, this font is natively underlined.
         /// </summary>
-        public bool Underline { get; private set; }
+        public bool Underlined { get; private set; }
         /// <summary>
-        /// If true, this font is natively outlined.
+        /// If true, this font is natively negative.
         /// </summary>
-        public bool Outline { get; private set; }
+        public bool Negative { get; private set; }
         /// <summary>
-        /// If true, this font is natively shadowed.
+        /// If true, this font is natively outline.
         /// </summary>
-        public bool Shadow { get; private set; }
+        public bool Outlined { get; private set; }
         /// <summary>
-        /// If true, this font is natively condensed.
+        /// If true, this font is natively overstruck.
         /// </summary>
-        public bool Condensed { get; private set; }
+        public bool Strikeout { get; private set; }
         /// <summary>
-        /// If true, this font is natively extended.
+        /// Characters are in the standard weight/style for the font.
         /// </summary>
-        public bool Extended { get; private set; }
+        public bool Regular { get; private set; }
         /// <summary>
         /// Gets the font container's location on disk.
         /// </summary>
         public string FileName { get; private set; }
         
-        private TypographicFont(string family, string subFamily, string name, TypographicFontWeight weight, bool bold, bool italic, bool underline, bool outline, bool shadow, bool condensed, bool extended, string fileName)
+        private TypographicFont(string family, string subFamily, string name, TypographicFontWeight weight, bool bold, bool italic, bool oblique, bool underlined, bool negative, bool outlined, bool strikeout, bool regular, string fileName)
         {
             this.Family = family;
             this.SubFamily = subFamily;
@@ -72,12 +76,13 @@ namespace jnm2.TypographicFonts
             this.Weight = weight;
             this.Bold = bold;
             this.Italic = italic;
-            this.Underline = underline;
-            this.Outline = outline;
-            this.Shadow = shadow;
-            this.Condensed = condensed;
-            this.Extended = extended;
+            this.Underlined = underlined;
+            this.Negative = negative;
+            this.Outlined = outlined;
+            this.Strikeout = strikeout;
+            this.Regular = regular;
             this.FileName = fileName;
+            this.Oblique = oblique;
         }
 
         public override string ToString()

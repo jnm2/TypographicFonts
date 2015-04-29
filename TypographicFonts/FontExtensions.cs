@@ -8,38 +8,50 @@ namespace jnm2.TypographicFonts
     {
         public static Font With(this Font font, TypographicFontWeight weight)
         {
-            return font.With(font.SizeInPoints, weight, font.Italic, font.Underline);
+            return font.With(font.SizeInPoints, weight, font.Italic, font.Underline, font.Strikeout);
         }
         public static Font With(this Font font, float size, TypographicFontWeight weight)
         {
-            return font.With(size, weight, font.Italic, font.Underline);
+            return font.With(size, weight, font.Italic, font.Underline, font.Strikeout);
         }
         public static Font With(this Font font, float size, TypographicFontWeight weight, bool italic)
         {
-            return font.With(size, weight, italic, font.Underline);
+            return font.With(size, weight, italic, font.Underline, font.Strikeout);
         }
         public static Font With(this Font font, float size, TypographicFontWeight weight, bool italic, bool underline)
         {
+            return font.With(size, weight, italic, underline, font.Strikeout);
+        }
+        public static Font With(this Font font, float size, TypographicFontWeight weight, bool italic, bool underline, bool strikeout)
+        {
             var selectedSubfamily = font.GetTypographicFamily().Fonts
-                .Where(_ => italic || !_.Italic && underline || !_.Underline) // Can simulate styles, but can't reverse them
-                .SelectMany(_ => new[]
+                .Where(_ => italic || !_.Italic && underline || !_.Underlined) // Can simulate styles, but can't reverse them
+                .SelectMany(_ => _.Bold ? new[]
                 {
-                    // Consider both normal and simulated-bold versions of each base font
+                    // Bold style is already set, so it cannot be set twice to simulate bolder
+                    new { font = _, simulateBold = false, weight = (int)_.Weight }
+                
+                } : new[]
+                {
+                    // Bold style could be set. Consider both normal and simulated-bold versions
                     new { font = _, simulateBold = false, weight = (int)_.Weight },
                     new { font = _, simulateBold = true, weight = (int)_.Weight * (int)TypographicFontWeight.Bold / (int)TypographicFontWeight.Normal }
                 })
                 .OrderBy(_ => Math.Abs(_.weight - (int)weight)) // Get the closest available by weight
                 .ThenByDescending(_ => _.font.Italic == italic) // Avoid simulating italic if possible
-                .ThenByDescending(_ => _.font.Underline == underline) // Avoid simulating underline if possible
-                .First(); 
-            
-            var fontStyle = font.Style & ~(FontStyle.Underline | FontStyle.Italic | FontStyle.Bold);
+                .ThenByDescending(_ => _.font.Underlined == underline) // Avoid simulating underline if possible
+                .ThenByDescending(_ => _.font.Strikeout == underline) // Avoid simulating strikethrough if possible
+                .First();
+
+            var fontStyle = FontStyle.Regular;
             if (selectedSubfamily.font.Bold || selectedSubfamily.simulateBold) 
                 fontStyle |= FontStyle.Bold;
             if (selectedSubfamily.font.Italic || italic)
                 fontStyle |= FontStyle.Italic;
-            if (selectedSubfamily.font.Underline || underline)
+            if (selectedSubfamily.font.Underlined || underline)
                 fontStyle |= FontStyle.Underline;
+            if (selectedSubfamily.font.Strikeout || strikeout)
+                fontStyle |= FontStyle.Strikeout;
 
             return selectedSubfamily.font.Name == font.Name && fontStyle == font.Style 
                 ? font
@@ -56,10 +68,12 @@ namespace jnm2.TypographicFonts
                 .Where(_ => _.Name == font.Name
                             && (font.Bold || !_.Bold) // If the GDI font doesn't have a style, neither can the base font. If it does have a style, the base might still not have the style- Windows simulates styles.
                             && (font.Italic || !_.Italic)
-                            && (font.Underline || !_.Underline))
+                            && (font.Underline || !_.Underlined)
+                            && (font.Strikeout || !_.Strikeout))
                 .OrderByDescending(_ => _.Bold == font.Bold)
                 .ThenByDescending(_ => _.Italic == font.Italic)
-                .ThenByDescending(_ => _.Underline == font.Underline)
+                .ThenByDescending(_ => _.Underlined == font.Underline)
+                .ThenByDescending(_ => _.Strikeout == font.Strikeout)
                 .First(); // Get the closest match if there are multiple
         }
         /// <summary>
